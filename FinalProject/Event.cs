@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 namespace FinalProject
 {
 	public class Event
@@ -6,63 +7,6 @@ namespace FinalProject
 		public Event()
 		{
 		}
-        public string ArrivalDate(string someDate)
-        {            
-            var startDate = someDate;
-
-            var valid = false;
-
-            do
-            {
-                if (int.Parse(startDate.Substring(0, 4)) < 2022)
-                {
-                    Console.WriteLine("Invalid year! Must pick a future date");
-                    valid = true;
-                }
-                else if (int.Parse(startDate.Substring(5, 2)) < 1 || int.Parse(startDate.Substring(5, 2)) > 12)
-                {
-                    Console.WriteLine("Invalid month! Must pick an existing month between 01-12");
-                    valid = true;
-                }
-                else if (int.Parse(startDate.Substring(5, 2)) == 2)
-                {
-                    if (int.Parse(startDate.Substring(8, 2)) < 1 || int.Parse(startDate.Substring(8, 2)) > 28)
-                    {
-                        Console.WriteLine("Invalid day! Must choose between 01-28 for the month of February");
-                        valid = true;
-                    }
-                }
-                else if (int.Parse(startDate.Substring(5, 2)) == 4 || int.Parse(startDate.Substring(5, 2)) == 6 || int.Parse(startDate.Substring(5, 2)) == 9 || int.Parse(startDate.Substring(5, 2)) == 11)
-                {
-                    if (int.Parse(startDate.Substring(8, 2)) < 1 || int.Parse(startDate.Substring(8, 2)) > 30)
-                    {
-                        Console.WriteLine("Invalid day! Must choose day between 01-30 for this month");
-                        valid = true;
-                    }
-                }
-                else if (int.Parse(startDate.Substring(5, 2)) == 1 || int.Parse(startDate.Substring(5, 2)) == 3 || int.Parse(startDate.Substring(5, 2)) == 5 || int.Parse(startDate.Substring(5, 2)) == 7 || int.Parse(startDate.Substring(5, 2)) == 8 || int.Parse(startDate.Substring(5, 2)) == 10 || int.Parse(startDate.Substring(5, 2)) == 12)
-                {
-                    if (int.Parse(startDate.Substring(8, 2)) < 1 || int.Parse(startDate.Substring(8, 2)) > 31)
-                    {
-                        Console.WriteLine("Invalid day! Must choose day between 01-31 for this month");
-                        valid = true;
-                    }
-                }
-                else if (startDate[4] != '-' || startDate[7] != '-')
-                {
-                    Console.WriteLine("Invalid input! Must use '-' to separate year, month and date. Please check format!");
-                    valid = true;
-                }
-                else
-                {
-                    Console.WriteLine("Invalid input! Please enter a valid date using YYYY-MM-DD format, where 'YYYY' is a 4-digit year, 'MM' is a 2-digit month, and 'DD' is a 2-digit day");
-                    valid = true;
-                }
-            } while (valid == true);
-
-
-            return startDate;
-        }
         public string ArrivalDate()
         {
             var startDate = "";
@@ -187,9 +131,9 @@ namespace FinalProject
                     Console.WriteLine("Invalid hour! Please choose an hour between 01 and 12.");
                     valid = true;
                 }
-                else if (int.Parse(time.Substring(3, 2)) < 1 || int.Parse(time.Substring(3, 2)) > 59)
+                else if (int.Parse(time.Substring(3, 2)) < 0 || int.Parse(time.Substring(3, 2)) > 59)
                 {
-                    Console.WriteLine("Invalid minute! Please choose a minute between 01 and 59.");
+                    Console.WriteLine("Invalid minute! Please choose a minute between 00 and 59.");
                     valid = true;
                 }
                 else if (time[2] != ':')
@@ -223,7 +167,7 @@ namespace FinalProject
             }
 
             var minutes = time.Substring(3, 2);
-            time = hour + minutes + ":00";
+            time = $"{hour}:{minutes}";
 
             return time;
         }
@@ -243,9 +187,9 @@ namespace FinalProject
                     Console.WriteLine("Invalid hour! Please choose an hour between 01 and 12.");
                     valid = true;
                 }
-                else if (int.Parse(time.Substring(3, 2)) < 1 || int.Parse(time.Substring(3, 2)) > 59)
+                else if (int.Parse(time.Substring(3, 2)) < 0 || int.Parse(time.Substring(3, 2)) > 59)
                 {
-                    Console.WriteLine("Invalid minute! Please choose a minute between 01 and 59.");
+                    Console.WriteLine("Invalid minute! Please choose a minute between 00 and 59.");
                     valid = true;
                 }
                 else if (time[2] != ':')
@@ -279,7 +223,7 @@ namespace FinalProject
             }
 
             var minutes = time.Substring(3, 2);
-            time = hour + minutes + ":00";
+            time = $"{hour}:{minutes}";
 
             return time;
         }
@@ -302,6 +246,32 @@ namespace FinalProject
             var genre = Console.ReadLine().ToLower();
             return genre;
         }
+        public JObject JsonResponse(string city, string startDate, string startTime, string endDate, string endTime, string apiKey)
+        {
+            var client = new HttpClient();
+            var startDateTime = $"{startDate}T{startTime}:00Z";
+            var endDateTime = $"{endDate}T{endTime}:00Z";
+
+            var eventURL = $"https://app.ticketmaster.com/discovery/v2/events.json?city={city}&startDateTime{startDateTime}&endDateTime={endDateTime}&apikey={apiKey}";
+            var response = client.GetStringAsync(eventURL).Result;
+
+            return JObject.Parse(response);
+        }
+        public void PrintSearchResults(JObject jsonResponse, string genre)
+        {
+            for (int i = 0; i < jsonResponse["_embedded"]["events"].Count(); i++)
+            {
+                var genreName = jsonResponse["_embedded"]["events"][i]["classifications"][0]["genre"]["name"].ToString().ToLower();
+                var startDate = jsonResponse["_embedded"]["events"][i]["dates"]["start"]["localDate"];
+                var eventName = jsonResponse["_embedded"]["events"][i]["name"];
+                var eventTime = jsonResponse["_embedded"]["events"][i]["dates"]["start"]["localTime"];
+
+                if (genre == genreName)
+                {
+                    Console.WriteLine($"On {startDate}, there will be a {eventName} at {eventTime}");
+                }
+            }
+
+        }
     }
 }
-
